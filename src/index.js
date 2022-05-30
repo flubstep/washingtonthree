@@ -6,6 +6,14 @@ import "./index.css";
 
 import { TileManager } from "./tile";
 
+const PinchState = {
+  None: 1,
+  Start: 2,
+  ScaleRotate: 3,
+  ScaleOnly: 4,
+  PitchOnly: 5,
+};
+
 class DragControls {
   constructor(camera, el, plane) {
     camera.rotation.order = "ZYX";
@@ -16,6 +24,8 @@ class DragControls {
     this.mouse = new THREE.Vector2();
     this.minCameraY = 50;
     this.maxCameraY = 10000;
+    this.angleThreshold = (Math.PI / 180) * 12;
+    this.scaleThreshold = 1.5;
 
     this.el.addEventListener("mousedown", (e) => this.onMouseDown(e));
     this.el.addEventListener("mousemove", (e) => this.onMouseMove(e));
@@ -32,6 +42,7 @@ class DragControls {
     this._rotateStart = null;
     this._dragStart = null;
     this._pinchStart = null;
+    this._pinchState = PinchState.None;
     this._modifier = false;
     this._cameraStart = null;
   }
@@ -90,6 +101,7 @@ class DragControls {
     this._rotateStart = null;
     this._pinchStart = null;
     this._modifier = false;
+    this._pinchState = PinchState.None;
   }
 
   onWheel(e) {
@@ -118,6 +130,7 @@ class DragControls {
         this._pinchStart = null;
         return;
       }
+      this._pinchState = PinchState.Start;
       this._cameraStart = this.camera.clone();
     }
   }
@@ -144,18 +157,42 @@ class DragControls {
         this.getMouseWorldCoordinates(touch2, this._cameraStart),
       ];
 
-      const distStart = this._pinchStart[0].distanceTo(this._pinchStart[1]);
-      const dist = pinches[0].distanceTo(pinches[1]);
-      this.camera.position.z = this._cameraStart.position.z * (distStart / dist);
+      // Calculate pinch and expand distance
+      if (
+        [PinchState.Start, PinchState.ScaleOnly, PinchState.ScaleRotate].includes(this._pinchState)
+      ) {
+        const distStart = this._pinchStart[0].distanceTo(this._pinchStart[1]);
+        const dist = pinches[0].distanceTo(pinches[1]);
+        const scale = distStart / dist;
+        this.camera.position.z = this._cameraStart.position.z * scale;
+        if (
+          this._pinchState === PinchState.Start &&
+          (scale > this.scaleThreshold || scale < 1 / this.scaleThreshold)
+        ) {
+          this._pinchState = PinchState.ScaleOnly;
+        }
+      }
 
-      const vecStart = this._pinchStart[1].clone();
-      vecStart.sub(this._pinchStart[0]);
-      const vecEnd = pinches[1].clone();
-      vecEnd.sub(pinches[0]);
+      // Rotation determined by the angle difference in the two pinch vectors
+      if ([PinchState.Start, PinchState.ScaleRotate].includes(this._pinchState)) {
+        const vecStart = this._pinchStart[1].clone();
+        vecStart.sub(this._pinchStart[0]);
+        const vecEnd = pinches[1].clone();
+        vecEnd.sub(pinches[0]);
 
-      const angleStart = Math.atan2(vecStart.y, vecStart.x);
-      const angleEnd = Math.atan2(vecEnd.y, vecEnd.x);
-      this.camera.rotation.z = this._cameraStart.rotation.z + angleStart - angleEnd;
+        const angleStart = Math.atan2(vecStart.y, vecStart.x);
+        const angleEnd = Math.atan2(vecEnd.y, vecEnd.x);
+        const angleDiff = angleStart - angleEnd;
+
+        if (this._pinchState === PinchState.Start) {
+          if (Math.abs(angleDiff) > this.angleThreshold) {
+            this._pinchState = PinchState.ScaleRotate;
+          }
+        }
+        if (this._pinchState === PinchState.ScaleRotate) {
+          this.camera.rotation.z = this._cameraStart.rotation.z + angleDiff;
+        }
+      }
     }
   }
 
