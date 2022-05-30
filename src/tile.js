@@ -52,6 +52,7 @@ export class TileManager {
   constructor(scene) {
     this.scene = scene;
     this.visibleTiles = {};
+    this.loadedKeys = [];
     this.loadingTiles = {};
     this.brokenTiles = {};
   }
@@ -60,11 +61,26 @@ export class TileManager {
     if (this.loadingTiles[tileKey] || this.brokenTiles[tileKey]) {
       return;
     }
+    if (!this.loadedKeys.includes(tileKey)) {
+      return;
+    }
     this.loadingTiles[tileKey] = Date.now();
     const tileUrl = `${BASE_URL}/tile_${tileKey}.json`;
     try {
       const response = await fetch(tileUrl);
+      if (!this.loadedKeys.includes(tileKey)) {
+        if (this.loadingTiles[tileKey]) {
+          delete this.loadingTiles[tileKey];
+        }
+        return;
+      }
       const points = await response.json();
+      if (!this.loadedKeys.includes(tileKey)) {
+        if (this.loadingTiles[tileKey]) {
+          delete this.loadingTiles[tileKey];
+        }
+        return;
+      }
       const zs = points.map((p) => p[2]);
       const zMin = _.min(zs) - 1.0;
       const zMax = Math.min(_.max(zs) + 1.0, zMin + 150);
@@ -92,9 +108,9 @@ export class TileManager {
     }
   }
 
-  discardUnloadedKeys(loadedKeys) {
+  discardUnloadedKeys() {
     const visibleKeys = _.keys(this.visibleTiles);
-    const evictKeys = _.difference(visibleKeys, loadedKeys);
+    const evictKeys = _.difference(visibleKeys, this.loadedKeys);
     for (const evictKey of evictKeys) {
       const mesh = this.visibleTiles[evictKey];
       this.scene.remove(mesh);
@@ -122,10 +138,11 @@ export class TileManager {
       }
       for (const tileKey of tileKeys) {
         loadedKeys.push(tileKey);
-        tilePromises.push(this.loadTile(tileKey, size));
+        tilePromises.push();
       }
     }
-    await Promise.all(tilePromises);
-    this.discardUnloadedKeys(loadedKeys);
+    this.loadedKeys = loadedKeys;
+    await Promise.all(loadedKeys.map((tileKey) => this.loadTile(tileKey, 2)));
+    this.discardUnloadedKeys();
   }
 }

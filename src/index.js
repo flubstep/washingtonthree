@@ -156,5 +156,6 @@ async function main() {
     false
   );
   window.camera = camera;
+  window.tiles = tiles;
 }
 main();
