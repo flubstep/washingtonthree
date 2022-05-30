@@ -18,7 +18,12 @@ class DragControls {
 
     this.el.addEventListener("mousedown", (e) => this.onMouseDown(e));
     this.el.addEventListener("mousemove", (e) => this.onMouseMove(e));
-    this.el.addEventListener("mouseup", (e) => this.onMouseUp(e));
+    this.el.addEventListener("mouseup", (e) => this.reset(e));
+
+    this.el.addEventListener("touchstart", (e) => this.onTouchStart(e));
+    this.el.addEventListener("touchmove", (e) => this.onTouchMove(e));
+    this.el.addEventListener("touchend", (e) => this.reset(e));
+
     window.addEventListener("wheel", (e) => this.onWheel(e));
 
     this.raycaster = new THREE.Raycaster();
@@ -72,16 +77,12 @@ class DragControls {
     if (!point) {
       return;
     }
-    const diff = new THREE.Vector3(
-      this._dragStart.x - point.x,
-      this._dragStart.y - point.y,
-      this._dragStart.z - point.z
-    );
     this.camera.position.copy(this._cameraStart.position);
-    this.camera.position.add(diff);
+    this.camera.position.add(this._dragStart);
+    this.camera.position.sub(point);
   }
 
-  onMouseUp(e) {
+  reset(e) {
     this._dragStart = null;
     this._cameraStart = null;
     this._rotateStart = null;
@@ -93,6 +94,32 @@ class DragControls {
     const z = camera.position.z;
     camera.position.z = Math.min(this.maxCameraY, Math.max(this.minCameraY, z + e.deltaY));
     return false;
+  }
+
+  onTouchStart(e) {
+    if (e.touches.length === 1) {
+      e.stopPropagation();
+      const [touch] = e.touches;
+      this._modifier = false;
+      this._dragStart = this.getMouseWorldCoordinates(touch, this.camera);
+      this._cameraStart = this.camera.clone();
+      return false;
+    }
+  }
+
+  onTouchMove(e) {
+    if (this._dragStart && e.touches.length === 1) {
+      e.stopPropagation();
+      const [touch] = e.touches;
+      const point = this.getMouseWorldCoordinates(touch, this._cameraStart);
+      if (!point) {
+        return;
+      }
+      this.camera.position.copy(this._cameraStart.position);
+      this.camera.position.add(this._dragStart);
+      this.camera.position.sub(point);
+      return false;
+    }
   }
 
   update() {}
