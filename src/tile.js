@@ -37,15 +37,15 @@ void main() {
 function tileSquareKeys(x, y, tile, length = 1) {
   const cx = Math.floor((x - XMIN) / tile);
   const cy = Math.floor((y - YMIN) / tile);
-  return _.flatten(
-    _.range(-length + 1, length).map((dx) =>
-      _.range(-length + 1, length).map((dy) => {
-        const tx = (cx + dx) * tile + XMIN;
-        const ty = (cy + dy) * tile + YMIN;
-        return `${tx}_${ty}_${tile}`;
-      })
-    )
+  const dists = _.range(-length + 1, length).flatMap((dx) =>
+    _.range(-length + 1, length).map((dy) => [dx, dy])
   );
+  const sortedDists = _.sortBy(dists, ([x, y]) => Math.abs(x) + Math.abs(y));
+  return sortedDists.map(([dx, dy]) => {
+    const tx = (cx + dx) * tile + XMIN;
+    const ty = (cy + dy) * tile + YMIN;
+    return `${tx}_${ty}_${tile}`;
+  });
 }
 
 export class TileManager {
@@ -67,7 +67,7 @@ export class TileManager {
       const points = await response.json();
       const zs = points.map((p) => p[2]);
       const zMin = _.min(zs) - 1.0;
-      const zMax = _.max(zs) + 1.0;
+      const zMax = Math.min(_.max(zs) + 1.0, zMin + 150);
       const pointsBuffer = _.flatten(points);
       const vertices = new Float32Array(pointsBuffer);
       const sizes = new Float32Array(points.map((p) => size));
@@ -108,11 +108,11 @@ export class TileManager {
   async updatePosition(position) {
     // TODO: Get 1, 4, 9 closest tiles of various densities
     const tileKeyParams = [
-      [tileSquareKeys(position.x, position.y, 8100, 4), 1, 100000000],
-      [tileSquareKeys(position.x, position.y, 2700, 4), 1, 20000],
-      [tileSquareKeys(position.x, position.y, 900, 4), 2, 6000],
-      [tileSquareKeys(position.x, position.y, 300, 4), 2, 3000],
-      [tileSquareKeys(position.x, position.y, 100, 3), 2, 1200],
+      [tileSquareKeys(position.x, position.y, 8100, 4), 2, 100000000],
+      [tileSquareKeys(position.x, position.y, 2700, 4), 2, 20000],
+      [tileSquareKeys(position.x, position.y, 900, 4), 2, 5000],
+      [tileSquareKeys(position.x, position.y, 300, 4), 2, 2000],
+      [tileSquareKeys(position.x, position.y, 100, 3), 2, 700],
     ];
     const tilePromises = [];
     const loadedKeys = [];
