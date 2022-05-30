@@ -1,3 +1,4 @@
+import _ from "lodash";
 import * as THREE from "three";
 import Stats from "three/examples/jsm/libs/stats.module";
 
@@ -30,6 +31,7 @@ class DragControls {
     this.raycasterDelta = new THREE.Raycaster();
     this._rotateStart = null;
     this._dragStart = null;
+    this._pinchStart = null;
     this._modifier = false;
     this._cameraStart = null;
   }
@@ -86,11 +88,13 @@ class DragControls {
     this._dragStart = null;
     this._cameraStart = null;
     this._rotateStart = null;
+    this._pinchStart = null;
     this._modifier = false;
   }
 
   onWheel(e) {
     e.stopPropagation();
+    e.preventDefault();
     const z = camera.position.z;
     camera.position.z = Math.min(this.maxCameraY, Math.max(this.minCameraY, z + e.deltaY));
     return false;
@@ -104,12 +108,24 @@ class DragControls {
       this._dragStart = this.getMouseWorldCoordinates(touch, this.camera);
       this._cameraStart = this.camera.clone();
       return false;
+    } else if (e.touches.length === 2) {
+      const [touch1, touch2] = e.touches;
+      this._pinchStart = [
+        this.getMouseWorldCoordinates(touch1, this.camera),
+        this.getMouseWorldCoordinates(touch2, this.camera),
+      ];
+      if (!this._pinchStart[0] || !this._pinchStart[1]) {
+        this._pinchStart = null;
+        return;
+      }
+      this._cameraStart = this.camera.clone();
     }
   }
 
   onTouchMove(e) {
     if (this._dragStart && e.touches.length === 1) {
       e.stopPropagation();
+      e.preventDefault();
       const [touch] = e.touches;
       const point = this.getMouseWorldCoordinates(touch, this._cameraStart);
       if (!point) {
@@ -119,6 +135,27 @@ class DragControls {
       this.camera.position.add(this._dragStart);
       this.camera.position.sub(point);
       return false;
+    } else if (this._pinchStart && e.touches.length === 2) {
+      e.stopPropagation();
+      e.preventDefault();
+      const [touch1, touch2] = e.touches;
+      const pinches = [
+        this.getMouseWorldCoordinates(touch1, this._cameraStart),
+        this.getMouseWorldCoordinates(touch2, this._cameraStart),
+      ];
+
+      const distStart = this._pinchStart[0].distanceTo(this._pinchStart[1]);
+      const dist = pinches[0].distanceTo(pinches[1]);
+      this.camera.position.z = this._cameraStart.position.z * (distStart / dist);
+
+      const vecStart = this._pinchStart[1].clone();
+      vecStart.sub(this._pinchStart[0]);
+      const vecEnd = pinches[1].clone();
+      vecEnd.sub(pinches[0]);
+
+      const angleStart = Math.atan2(vecStart.y, vecStart.x);
+      const angleEnd = Math.atan2(vecEnd.y, vecEnd.x);
+      this.camera.rotation.z = this._cameraStart.rotation.z + angleStart - angleEnd;
     }
   }
 

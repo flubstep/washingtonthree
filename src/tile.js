@@ -20,9 +20,12 @@ void main() {
   if (h < 0) {
     h = h + 16581375;
   }
-  float r = float(h % 256) / 256.0;
-  float g = float((h / 256) % 256) / 256.0;
-  float b = float((h / 65536) % 256) / 256.0;
+  int bi = (h / 65536);
+  int gi = (h - bi * 65536) / 256;
+  int ri = (h - bi * 65536 - gi * 256);
+  float r = float(ri) / 256.0;
+  float g = float(gi) / 256.0;
+  float b = float(bi) / 256.0;
   v_heightColor = vec3(b, b, 0.3);
 }
 `;
