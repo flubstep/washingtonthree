@@ -130,7 +130,7 @@ table {
 }
 
 body {
-  font-family: "Avenir";
+  font-family: "Avenir", Arial, Helvetica, sans-serif;
 }
 
 @media only screen and (max-width: 600px) {
