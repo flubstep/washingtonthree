@@ -121,11 +121,11 @@ export class TileManager {
   async updatePosition(position) {
     // TODO: Get 1, 4, 9 closest tiles of various densities
     const tileKeyParams = [
-      [tileSquareKeys(position.x, position.y, 8100, 4), 100000000],
-      [tileSquareKeys(position.x, position.y, 2700, 4), 20000],
-      [tileSquareKeys(position.x, position.y, 900, 4), 5000],
-      [tileSquareKeys(position.x, position.y, 300, 4), 2000],
-      [tileSquareKeys(position.x, position.y, 100, 3), 700],
+      [tileSquareKeys(position.x, position.y, 8100, 5), 100000000],
+      [tileSquareKeys(position.x, position.y, 2700, 5), 20000],
+      [tileSquareKeys(position.x, position.y, 900, 5), 5000],
+      [tileSquareKeys(position.x, position.y, 300, 5), 2000],
+      [tileSquareKeys(position.x, position.y, 100, 5), 700],
     ];
     const tilePromises = [];
     const loadedKeys = [];
