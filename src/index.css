@@ -128,3 +128,27 @@ table {
   border-collapse: collapse;
   border-spacing: 0;
 }
+
+body {
+  font-family: "Avenir";
+}
+
+@media only screen and (max-width: 600px) {
+  .instructions.desktop {
+    display: none;
+  }
+}
+
+.instructions.desktop {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  color: #cccccc;
+  font-size: 14px;
+  background-color: rgba(0, 0, 0, 0.5);
+  padding: 10px 20px;
+}
+
+.dragging {
+  cursor: move;
+}

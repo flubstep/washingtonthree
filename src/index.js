@@ -66,10 +66,12 @@ class DragControls {
       this._modifier = true;
       this._rotateStart = { x: e.clientX, y: e.clientY };
       this._cameraStart = this.camera.clone();
+      this.el.classList.add("dragging");
     } else {
       this._modifier = false;
       this._dragStart = this.getMouseWorldCoordinates(e, this.camera);
       this._cameraStart = this.camera.clone();
+      this.el.classList.add("dragging");
     }
   }
 
@@ -103,6 +105,7 @@ class DragControls {
     this._pinchStart = null;
     this._modifier = false;
     this._pinchState = PinchState.None;
+    this.el.classList.remove("dragging");
   }
 
   onWheel(e) {
