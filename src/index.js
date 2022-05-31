@@ -25,7 +25,8 @@ class DragControls {
     this.minCameraY = 50;
     this.maxCameraY = 10000;
     this.angleThreshold = (Math.PI / 180) * 12;
-    this.scaleThreshold = 1.5;
+    this.pinchZoomBuffer = 40;
+    this.pitchBuffer = 40;
 
     this.el.addEventListener("mousedown", (e) => this.onMouseDown(e));
     this.el.addEventListener("mousemove", (e) => this.onMouseMove(e));
@@ -123,13 +124,9 @@ class DragControls {
     } else if (e.touches.length === 2) {
       const [touch1, touch2] = e.touches;
       this._pinchStart = [
-        this.getMouseWorldCoordinates(touch1, this.camera),
-        this.getMouseWorldCoordinates(touch2, this.camera),
+        new THREE.Vector2(touch1.clientX, touch1.clientY),
+        new THREE.Vector2(touch2.clientX, touch2.clientY),
       ];
-      if (!this._pinchStart[0] || !this._pinchStart[1]) {
-        this._pinchStart = null;
-        return;
-      }
       this._pinchState = PinchState.Start;
       this._cameraStart = this.camera.clone();
     }
@@ -152,25 +149,61 @@ class DragControls {
       e.stopPropagation();
       e.preventDefault();
       const [touch1, touch2] = e.touches;
-      const pinches = [
-        this.getMouseWorldCoordinates(touch1, this._cameraStart),
-        this.getMouseWorldCoordinates(touch2, this._cameraStart),
+      const deltas = [
+        new THREE.Vector2(touch1.clientX, touch1.clientY),
+        new THREE.Vector2(touch2.clientX, touch2.clientY),
       ];
+      deltas[0].sub(this._pinchStart[0]);
+      deltas[1].sub(this._pinchStart[1]);
+
+      if (this._pinchState === PinchState.Start) {
+        // Figure out of we are doing two finger drag
+        if (
+          deltas[0].length() > this.pitchBuffer &&
+          deltas[1].length() > this.pitchBuffer &&
+          Math.abs(deltas[0].x) < 50 &&
+          Math.abs(deltas[1].x) < 50
+        ) {
+          this._pinchState = PinchState.PitchOnly;
+        }
+      }
+
+      // The following controls are based off of world state
+      const pinches = [
+        new THREE.Vector2(touch1.clientX, touch1.clientY),
+        new THREE.Vector2(touch2.clientX, touch2.clientY),
+      ];
+
+      if (this._pinchState === PinchState.PitchOnly) {
+        const dy = _.maxBy([deltas[0].y, deltas[1].y], Math.abs);
+        const dyBuffered =
+          dy < 0 ? Math.min(dy + this.pitchBuffer, 0) : Math.max(dy - this.pitchBuffer, 0);
+        const rx = this._cameraStart.rotation.x - (dyBuffered / window.innerHeight) * Math.PI;
+        this.camera.rotation.x = Math.min(Math.PI / 2, Math.max(0, rx));
+      }
 
       // Calculate pinch and expand distance
       if (
         [PinchState.Start, PinchState.ScaleOnly, PinchState.ScaleRotate].includes(this._pinchState)
       ) {
         const distStart = this._pinchStart[0].distanceTo(this._pinchStart[1]);
-        const dist = pinches[0].distanceTo(pinches[1]);
-        const scale = distStart / dist;
-        this.camera.position.z = this._cameraStart.position.z * scale;
+        let dist = pinches[0].distanceTo(pinches[1]);
+
         if (
           this._pinchState === PinchState.Start &&
-          (scale > this.scaleThreshold || scale < 1 / this.scaleThreshold)
+          Math.abs(distStart - dist) > this.pinchZoomBuffer
         ) {
           this._pinchState = PinchState.ScaleOnly;
         }
+
+        // Add a buffer into the pinch calculation
+        if (dist < distStart) {
+          dist = Math.min(distStart, dist + this.pinchZoomBuffer);
+        } else if (dist > distStart) {
+          dist = Math.max(distStart, dist - this.pinchZoomBuffer);
+        }
+        const scale = distStart / dist;
+        this.camera.position.z = this._cameraStart.position.z * scale;
       }
 
       // Rotation determined by the angle difference in the two pinch vectors
@@ -182,7 +215,7 @@ class DragControls {
 
         const angleStart = Math.atan2(vecStart.y, vecStart.x);
         const angleEnd = Math.atan2(vecEnd.y, vecEnd.x);
-        const angleDiff = angleStart - angleEnd;
+        const angleDiff = angleEnd - angleStart;
 
         if (this._pinchState === PinchState.Start) {
           if (Math.abs(angleDiff) > this.angleThreshold) {
