@@ -1,7 +1,7 @@
 import _ from "lodash";
 import * as THREE from "three";
 
-const BASE_URL = "https://washingtonthree.s3.us-east-2.amazonaws.com/bintiles";
+const BASE_URL = "https://s3.us-east-2.wasabisys.com/washingtonthree/bintiles";
 const [XMIN, YMIN] = [389400, 124200];
 
 const VERTEX_SHADER = `
