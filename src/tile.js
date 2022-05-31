@@ -1,10 +1,8 @@
 import _ from "lodash";
 import * as THREE from "three";
 
-const BASE_URL = "https://washingtonthree.s3.us-east-2.amazonaws.com/tiles";
-const TILES = [100, 300, 900, 2700, 8100, 24300];
-const [XMIN, XMAX] = [389400, 408600];
-const [YMIN, YMAX] = [124200, 148200];
+const BASE_URL = "https://washingtonthree.s3.us-east-2.amazonaws.com/bintiles";
+const [XMIN, YMIN] = [389400, 124200];
 
 const VERTEX_SHADER = `
 uniform float zMin;
@@ -60,7 +58,7 @@ export class TileManager {
     this.brokenTiles = {};
   }
 
-  async loadTile(tileKey, size = 1) {
+  async loadTile(tileKey, size = 2) {
     if (this.loadingTiles[tileKey] || this.brokenTiles[tileKey]) {
       return;
     }
@@ -68,7 +66,7 @@ export class TileManager {
       return;
     }
     this.loadingTiles[tileKey] = Date.now();
-    const tileUrl = `${BASE_URL}/tile_${tileKey}.json`;
+    const tileUrl = `${BASE_URL}/tile_${tileKey}.bin`;
     try {
       const response = await fetch(tileUrl);
       if (!this.loadedKeys.includes(tileKey)) {
@@ -77,22 +75,18 @@ export class TileManager {
         }
         return;
       }
-      const points = await response.json();
+      const buffer = await response.arrayBuffer();
       if (!this.loadedKeys.includes(tileKey)) {
         if (this.loadingTiles[tileKey]) {
           delete this.loadingTiles[tileKey];
         }
         return;
       }
-      const zs = points.map((p) => p[2]);
-      const zMin = _.min(zs) - 1.0;
-      const zMax = Math.min(_.max(zs) + 1.0, zMin + 150);
-      const pointsBuffer = _.flatten(points);
-      const vertices = new Float32Array(pointsBuffer);
-      const sizes = new Float32Array(points.map((p) => size));
+      const vertices = new Float32Array(buffer);
+      const zMin = vertices[2];
+      const zMax = vertices[vertices.length - 1];
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
-      geometry.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
 
       const material = new THREE.ShaderMaterial({
         vertexShader: VERTEX_SHADER,
@@ -127,15 +121,15 @@ export class TileManager {
   async updatePosition(position) {
     // TODO: Get 1, 4, 9 closest tiles of various densities
     const tileKeyParams = [
-      [tileSquareKeys(position.x, position.y, 8100, 4), 2, 100000000],
-      [tileSquareKeys(position.x, position.y, 2700, 4), 2, 20000],
-      [tileSquareKeys(position.x, position.y, 900, 4), 2, 5000],
-      [tileSquareKeys(position.x, position.y, 300, 4), 2, 2000],
-      [tileSquareKeys(position.x, position.y, 100, 3), 2, 700],
+      [tileSquareKeys(position.x, position.y, 8100, 4), 100000000],
+      [tileSquareKeys(position.x, position.y, 2700, 4), 20000],
+      [tileSquareKeys(position.x, position.y, 900, 4), 5000],
+      [tileSquareKeys(position.x, position.y, 300, 4), 2000],
+      [tileSquareKeys(position.x, position.y, 100, 3), 700],
     ];
     const tilePromises = [];
     const loadedKeys = [];
-    for (const [tileKeys, size, maxHeight] of tileKeyParams) {
+    for (const [tileKeys, maxHeight] of tileKeyParams) {
       if (position.z > maxHeight) {
         continue;
       }
@@ -145,7 +139,7 @@ export class TileManager {
       }
     }
     this.loadedKeys = loadedKeys;
-    await Promise.all(loadedKeys.map((tileKey) => this.loadTile(tileKey, 2)));
+    await Promise.all(loadedKeys.map((tileKey) => this.loadTile(tileKey)));
     this.discardUnloadedKeys();
   }
 }

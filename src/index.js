@@ -264,7 +264,7 @@ async function main() {
 
   const controls = new DragControls(camera, renderer.domElement, plane);
 
-  const delay = 100;
+  const delay = 500;
   tiles.updatePosition(camera.position);
   let nextCameraUpdate = Date.now() + delay;
 
