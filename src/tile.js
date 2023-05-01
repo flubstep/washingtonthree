@@ -1,22 +1,42 @@
 import _ from "lodash";
 import * as THREE from "three";
-
-const BASE_URL = "https://s3.us-east-2.wasabisys.com/washingtonthree/bintiles";
-const [XMIN, YMIN] = [389400, 124200];
+import { BASE_URL, XMIN, YMIN } from "./constants";
 
 const VERTEX_SHADER = `
-uniform float zMin;
-uniform float zMax;
 uniform float size;
+uniform sampler2D ground;
+uniform sampler2D ceiling;
 varying vec3 v_heightColor;
 
 void main() {
+  float xMin = 389400.0;
+  float xMax = 408600.0;
+  float yMin = 124200.0;
+  float yMax = 148200.0;
+
+  int aa = int(1000.0 * (position.x + position.y));
+  int bb = 200;
+  float xp = (position.x - xMin) / (xMax - xMin);
+  float yp = 1.0 - (position.y - yMin) / (yMax - yMin);
+
+  float zMin = texture2D(ground, vec2(xp, yp)).r * 65536.0 / 100.0;
+  float zMax = texture2D(ceiling, vec2(xp, yp)).r * 65536.0 / 100.0;
+
+  if (zMin > 327.68) {
+    zMin -= 655.36;
+  }
+  if (zMax > 327.68) {
+    zMax -= 655.36;
+  }
+
+  float fuzz = float(aa - (bb * int(aa / bb)));
 	gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  gl_PointSize = size;
+  gl_PointSize = max(size, size * (100.0 - float(bb / 2) + fuzz) / gl_Position.w);
+
   highp float height = (position.z - zMin) / (zMax - zMin) * 16581375.0;
   int h = int(height);
   if (h < 0) {
-    h = h + 16581375;
+    h = 0;
   }
   int bi = (h / 65536);
   int gi = (h - bi * 65536) / 256;
@@ -50,15 +70,17 @@ function tileSquareKeys(x, y, tile, length = 1) {
 }
 
 export class TileManager {
-  constructor(scene) {
+  constructor(scene, heightMapTexture, ceilingMapTexture) {
     this.scene = scene;
     this.visibleTiles = {};
     this.loadedKeys = [];
     this.loadingTiles = {};
     this.brokenTiles = {};
+    this.heightMapTexture = heightMapTexture;
+    this.ceilingMapTexture = ceilingMapTexture;
   }
 
-  async loadTile(tileKey, size = 2) {
+  async loadTile(tileKey, size = 2.0) {
     if (this.loadingTiles[tileKey] || this.brokenTiles[tileKey]) {
       return;
     }
@@ -95,6 +117,14 @@ export class TileManager {
           zMin: { type: "f", value: zMin },
           zMax: { type: "f", value: zMax },
           size: { type: "f", value: size },
+          ground: {
+            type: "t",
+            value: this.heightMapTexture,
+          },
+          ceiling: {
+            type: "t",
+            value: this.ceilingMapTexture,
+          },
         },
       });
       const mesh = new THREE.Points(geometry, material);

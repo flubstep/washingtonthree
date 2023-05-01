@@ -1,10 +1,19 @@
 import _ from "lodash";
 import * as THREE from "three";
 import Stats from "three/examples/jsm/libs/stats.module";
+import {
+  HEIGHT_MAP_TEXTURE_URL,
+  CEILING_HEIGHT_TEXTURE_URL,
+  XMIN,
+  XMAX,
+  YMIN,
+  YMAX,
+  CX,
+  CY,
+} from "./constants";
+import { TileManager } from "./tile";
 
 import "./index.css";
-
-import { TileManager } from "./tile";
 
 const PinchState = {
   None: 1,
@@ -235,17 +244,15 @@ class DragControls {
   update() {}
 }
 
-const [XMIN, XMAX] = [389400, 408600];
-const [YMIN, YMAX] = [124200, 148200];
-const CX = (XMIN + XMAX) / 2;
-const CY = (YMIN + YMAX) / 2;
-
 async function main() {
   const scene = new THREE.Scene();
-  const tiles = new TileManager(scene);
   const renderer = new THREE.WebGLRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
+
+  const heightMapTexture = new THREE.TextureLoader().load(HEIGHT_MAP_TEXTURE_URL);
+  const ceilingMapTexture = new THREE.TextureLoader().load(CEILING_HEIGHT_TEXTURE_URL);
+  const tiles = new TileManager(scene, heightMapTexture, ceilingMapTexture);
 
   const camera = new THREE.PerspectiveCamera(
     60,

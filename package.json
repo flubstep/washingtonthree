@@ -10,5 +10,8 @@
     "lodash": "^4.17.21",
     "parcel": "^2.8.3",
     "three": "^0.141.0"
+  },
+  "devDependencies": {
+    "constants-browserify": "^1.0.0"
   }
 }
