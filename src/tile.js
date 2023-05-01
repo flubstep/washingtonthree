@@ -28,6 +28,7 @@ void main() {
   if (zMax > 327.68) {
     zMax -= 655.36;
   }
+  zMax = max(zMax, zMin + 20.0);
 
   float fuzz = float(aa - (bb * int(aa / bb)));
 	gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);

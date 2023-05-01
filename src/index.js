@@ -300,6 +300,33 @@ async function main() {
     },
     false
   );
+
+  const bookmarks = [];
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "c") {
+      const name = prompt("Give a name for this shortcut location.");
+      const quaternion = new THREE.Quaternion();
+      quaternion.setFromEuler(camera.rotation);
+      bookmarks.push({
+        name,
+        position: _.pick(camera.position, ["x", "y", "z"]),
+        rotation: _.pick(quaternion, ["x", "y", "z", "w"]),
+      });
+    }
+    if (e.key === "d") {
+      const dataStr =
+        "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(bookmarks));
+      const anchor = document.createElement("a");
+      document.body.appendChild(anchor);
+      anchor.setAttribute("href", dataStr);
+      anchor.setAttribute("download", "bookmarks.json");
+      anchor.click();
+      setTimeout(() => {
+        anchor.remove();
+      });
+    }
+  });
+
   window.camera = camera;
   window.tiles = tiles;
 }
