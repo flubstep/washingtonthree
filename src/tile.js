@@ -44,7 +44,7 @@ void main() {
   float r = float(ri) / 256.0;
   float g = float(gi) / 256.0;
   float b = float(bi) / 256.0;
-  v_heightColor = vec3(b, b, 0.3);
+  v_heightColor = vec3(b, b, b);
 }
 `;
 

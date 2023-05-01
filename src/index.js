@@ -32,7 +32,7 @@ class DragControls {
     this.plane = plane;
     this.mouse = new THREE.Vector2();
     this.minCameraY = 50;
-    this.maxCameraY = 10000;
+    this.maxCameraY = 18000;
     this.angleThreshold = (Math.PI / 180) * 12;
     this.pinchZoomBuffer = 40;
     this.pitchBuffer = 40;
@@ -248,10 +248,11 @@ async function main() {
   const scene = new THREE.Scene();
   const renderer = new THREE.WebGLRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x000022, 1.0);
   document.body.appendChild(renderer.domElement);
 
-  const heightMapTexture = new THREE.TextureLoader().load(HEIGHT_MAP_TEXTURE_URL);
-  const ceilingMapTexture = new THREE.TextureLoader().load(CEILING_HEIGHT_TEXTURE_URL);
+  const heightMapTexture = await new THREE.TextureLoader().loadAsync(HEIGHT_MAP_TEXTURE_URL);
+  const ceilingMapTexture = await new THREE.TextureLoader().loadAsync(CEILING_HEIGHT_TEXTURE_URL);
   const tiles = new TileManager(scene, heightMapTexture, ceilingMapTexture);
 
   const camera = new THREE.PerspectiveCamera(
