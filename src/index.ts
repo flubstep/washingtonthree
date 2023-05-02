@@ -1,6 +1,7 @@
 import _ from "lodash";
 import * as THREE from "three";
 import * as TWEEN from "@tweenjs/tween.js";
+// @ts-ignore
 import Stats from "three/examples/jsm/libs/stats.module";
 import {
   HEIGHT_MAP_TEXTURE_URL,
@@ -18,49 +19,46 @@ import { GUI } from "dat.gui";
 import "./index.css";
 import { Bookmarks } from "./bookmarks";
 
-const PinchState = {
-  None: 1,
-  Start: 2,
-  ScaleRotate: 3,
-  ScaleOnly: 4,
-  PitchOnly: 5,
-};
+enum PinchState {
+  None = 1,
+  Start = 2,
+  ScaleRotate = 3,
+  ScaleOnly = 4,
+  PitchOnly = 5,
+}
 
 class DragControls {
-  constructor(camera, el, plane) {
-    camera.rotation.order = "ZYX";
+  private minCameraY = 50;
+  private maxCameraY = 18000;
+  private angleThreshold = (Math.PI / 180) * 12;
+  private pinchZoomBuffer = 40;
+  private pitchBuffer = 40;
 
-    this.camera = camera;
-    this.el = el;
-    this.plane = plane;
-    this.mouse = new THREE.Vector2();
-    this.minCameraY = 50;
-    this.maxCameraY = 18000;
-    this.angleThreshold = (Math.PI / 180) * 12;
-    this.pinchZoomBuffer = 40;
-    this.pitchBuffer = 40;
+  private mouse = new THREE.Vector2();
+  private raycaster = new THREE.Raycaster();
 
+  private _rotateStart: THREE.Vector2 | null = null;
+  private _dragStart: THREE.Vector3 | null = null;
+  private _pinchStart: THREE.Vector2[] | null = null;
+  private _pinchState: PinchState = PinchState.None;
+  private _modifier = false;
+  private _cameraStart: THREE.Camera | null = null;
+
+  constructor(public camera: THREE.Camera, private el: HTMLElement, private plane: THREE.Mesh) {
+    this.camera.rotation.order = "ZYX";
     this.el.addEventListener("mousedown", (e) => this.onMouseDown(e));
     this.el.addEventListener("mousemove", (e) => this.onMouseMove(e));
     this.el.addEventListener("mouseup", (e) => this.reset(e));
-
     this.el.addEventListener("touchstart", (e) => this.onTouchStart(e));
     this.el.addEventListener("touchmove", (e) => this.onTouchMove(e));
     this.el.addEventListener("touchend", (e) => this.reset(e));
-
     window.addEventListener("wheel", (e) => this.onWheel(e));
-
-    this.raycaster = new THREE.Raycaster();
-    this.raycasterDelta = new THREE.Raycaster();
-    this._rotateStart = null;
-    this._dragStart = null;
-    this._pinchStart = null;
-    this._pinchState = PinchState.None;
-    this._modifier = false;
-    this._cameraStart = null;
   }
 
-  getMouseWorldCoordinates(e, camera) {
+  getMouseWorldCoordinates(e: MouseEvent | TouchInit, camera: THREE.Camera) {
+    if (e.clientX === undefined || e.clientY === undefined) {
+      return null;
+    }
     this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
     this.mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
     this.raycaster.setFromCamera(this.mouse, camera);
@@ -71,12 +69,12 @@ class DragControls {
     return null;
   }
 
-  onMouseDown(e) {
+  onMouseDown(e: MouseEvent) {
     const modifier =
       e.getModifierState("Control") || e.getModifierState("Alt") || e.getModifierState("Meta");
     if (modifier) {
       this._modifier = true;
-      this._rotateStart = { x: e.clientX, y: e.clientY };
+      this._rotateStart = new THREE.Vector2(e.clientX, e.clientY);
       this._cameraStart = this.camera.clone();
       this.el.classList.add("dragging");
     } else {
@@ -87,8 +85,8 @@ class DragControls {
     }
   }
 
-  onMouseMove(e) {
-    if (this._modifier && this._rotateStart) {
+  onMouseMove(e: MouseEvent) {
+    if (this._modifier && this._rotateStart && this._cameraStart) {
       this.hideInstructions();
       const dx = e.clientX - this._rotateStart.x;
       const dy = e.clientY - this._rotateStart.y;
@@ -102,6 +100,9 @@ class DragControls {
     if (!this._dragStart) {
       return;
     }
+    if (!this._cameraStart) {
+      return;
+    }
     const point = this.getMouseWorldCoordinates(e, this._cameraStart);
     if (!point) {
       return;
@@ -113,10 +114,13 @@ class DragControls {
   }
 
   hideInstructions() {
-    document.getElementById("instructions").classList.add("hidden");
+    const instructions = document.getElementById("instructions");
+    if (instructions) {
+      instructions.classList.add("hidden");
+    }
   }
 
-  reset(e) {
+  reset() {
     this._dragStart = null;
     this._cameraStart = null;
     this._rotateStart = null;
@@ -126,16 +130,16 @@ class DragControls {
     this.el.classList.remove("dragging");
   }
 
-  onWheel(e) {
+  onWheel(e: WheelEvent) {
     e.stopPropagation();
     e.preventDefault();
-    const z = camera.position.z;
-    camera.position.z = Math.min(this.maxCameraY, Math.max(this.minCameraY, z + e.deltaY));
+    const z = this.camera.position.z;
+    this.camera.position.z = Math.min(this.maxCameraY, Math.max(this.minCameraY, z + e.deltaY));
     this.hideInstructions();
     return false;
   }
 
-  onTouchStart(e) {
+  onTouchStart(e: TouchEvent) {
     if (e.touches.length === 1) {
       e.stopPropagation();
       const [touch] = e.touches;
@@ -154,14 +158,17 @@ class DragControls {
     }
   }
 
-  onTouchMove(e) {
-    if (this._dragStart && e.touches.length === 1) {
+  onTouchMove(e: TouchEvent) {
+    if (this._dragStart && e.touches.length === 1 && this._cameraStart) {
       this.hideInstructions();
       e.stopPropagation();
       e.preventDefault();
       const [touch] = e.touches;
       const point = this.getMouseWorldCoordinates(touch, this._cameraStart);
       if (!point) {
+        return;
+      }
+      if (!this._cameraStart) {
         return;
       }
       this.camera.position.copy(this._cameraStart.position);
@@ -198,8 +205,8 @@ class DragControls {
         new THREE.Vector2(touch2.clientX, touch2.clientY),
       ];
 
-      if (this._pinchState === PinchState.PitchOnly) {
-        const dy = _.maxBy([deltas[0].y, deltas[1].y], Math.abs);
+      if (this._pinchState === PinchState.PitchOnly && this._cameraStart) {
+        const dy = _.maxBy([deltas[0].y, deltas[1].y], Math.abs) ?? 0;
         const dyBuffered =
           dy < 0 ? Math.min(dy + this.pitchBuffer, 0) : Math.max(dy - this.pitchBuffer, 0);
         const rx = this._cameraStart.rotation.x - (dyBuffered / window.innerHeight) * Math.PI;
@@ -227,7 +234,9 @@ class DragControls {
           dist = Math.max(distStart, dist - this.pinchZoomBuffer);
         }
         const scale = distStart / dist;
-        this.camera.position.z = this._cameraStart.position.z * scale;
+        if (this._cameraStart) {
+          this.camera.position.z = this._cameraStart.position.z * scale;
+        }
       }
 
       // Rotation determined by the angle difference in the two pinch vectors
@@ -246,14 +255,18 @@ class DragControls {
             this._pinchState = PinchState.ScaleRotate;
           }
         }
-        if (this._pinchState === PinchState.ScaleRotate) {
+        if (this._pinchState === PinchState.ScaleRotate && this._cameraStart) {
           this.camera.rotation.z = this._cameraStart.rotation.z + angleDiff;
         }
       }
     }
   }
 
-  moveTo(position, rotation, durationMs = 1000) {
+  moveTo(
+    position: { x: number; y: number; z: number },
+    rotation: { x: number; y: number; z: number; w: number },
+    durationMs = 1000
+  ) {
     this.hideInstructions();
     new TWEEN.Tween(this.camera.position)
       // Set the target position
@@ -310,7 +323,7 @@ async function main() {
   tiles.updatePosition(camera.position);
   let nextCameraUpdate = Date.now() + delay;
 
-  function animate(time) {
+  function animate(time: number) {
     if (Date.now() > nextCameraUpdate) {
       tiles.updatePosition(camera.position);
       nextCameraUpdate = Date.now() + delay;
@@ -337,7 +350,7 @@ async function main() {
   let bookmarkIndex = 0;
   window.addEventListener("keydown", (e) => {
     if (e.key === "c") {
-      const name = prompt("Give a name for this shortcut location.");
+      const name = prompt("Give a name for this shortcut location.") || "Unnamed Location";
       const quaternion = new THREE.Quaternion();
       quaternion.setFromEuler(camera.rotation);
       bookmarks.push({
@@ -359,8 +372,8 @@ async function main() {
       });
     }
     if (e.key === "m") {
-      const bookmark = bookmarks[bookmarkIndex];
-      controls.moveTo(bookmark.position, bookmark.rotation, 1000);
+      const { position, rotation } = bookmarks[bookmarkIndex];
+      controls.moveTo(position, rotation, 1000);
       bookmarkIndex++;
       bookmarkIndex %= bookmarks.length;
     }
@@ -368,7 +381,7 @@ async function main() {
 
   const gui = new GUI({ autoPlace: false });
   const navigationFolder = gui.addFolder("Navigate to Landmark");
-  const navigationActions = {};
+  const navigationActions: { [name: string]: any } = {};
   for (const bookmark of Bookmarks) {
     navigationActions[bookmark.name] = () => {
       controls.moveTo(bookmark.position, bookmark.rotation, 1000);
@@ -381,7 +394,9 @@ async function main() {
   gui.domElement.id = "gui";
   document.body.appendChild(gui.domElement);
 
+  // @ts-ignore
   window.camera = camera;
+  // @ts-ignore
   window.tiles = tiles;
 }
 main();

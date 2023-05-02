@@ -1,7 +1,26 @@
-export const Bookmarks = [
+type Bookmark = {
+  name: string;
+  position: {
+    x: number;
+    y: number;
+    z: number;
+  };
+  rotation: {
+    x: number;
+    y: number;
+    z: number;
+    w: number;
+  };
+};
+
+export const Bookmarks: Bookmark[] = [
   {
     name: "Lincoln Memorial",
-    position: { x: 395815.8072678634, y: 135708.99712857336, z: 81.99999999999994 },
+    position: {
+      x: 395815.8072678634,
+      y: 135708.99712857336,
+      z: 81.99999999999994,
+    },
     rotation: {
       x: 0.38111491767320843,
       y: 0.3763944394891921,
@@ -11,7 +30,11 @@ export const Bookmarks = [
   },
   {
     name: "Washington Monument",
-    position: { x: 396611.23523049254, y: 135733.80775248454, z: 125.99999999999989 },
+    position: {
+      x: 396611.23523049254,
+      y: 135733.80775248454,
+      z: 125.99999999999989,
+    },
     rotation: {
       x: 0.4226686209517351,
       y: -0.4315832075303492,
@@ -21,7 +44,11 @@ export const Bookmarks = [
   },
   {
     name: "Watergate Hotel",
-    position: { x: 395038.2095103554, y: 136655.2795204888, z: 139.99999999999983 },
+    position: {
+      x: 395038.2095103554,
+      y: 136655.2795204888,
+      z: 139.99999999999983,
+    },
     rotation: {
       x: 0.45004979006763157,
       y: -0.21509069069048667,
@@ -31,7 +58,11 @@ export const Bookmarks = [
   },
   {
     name: "Theodore Roosevelt Island",
-    position: { x: 394885.46908155276, y: 136258.56509198656, z: 1283.9999999999995 },
+    position: {
+      x: 394885.46908155276,
+      y: 136258.56509198656,
+      z: 1283.9999999999995,
+    },
     rotation: {
       x: 0.11800094010510062,
       y: 0.08000904042271056,
@@ -41,7 +72,11 @@ export const Bookmarks = [
   },
   {
     name: "Smithsonian Buildings",
-    position: { x: 397758.2807120735, y: 135571.8578538899, z: 616.0000000000002 },
+    position: {
+      x: 397758.2807120735,
+      y: 135571.8578538899,
+      z: 616.0000000000002,
+    },
     rotation: {
       x: 0.16452061706204615,
       y: 0.0013710368792954595,
@@ -51,7 +86,11 @@ export const Bookmarks = [
   },
   {
     name: "Rock Creek Park",
-    position: { x: 396081.9044355407, y: 142321.4317955135, z: 238 },
+    position: {
+      x: 396081.9044355407,
+      y: 142321.4317955135,
+      z: 238,
+    },
     rotation: {
       x: 0.5626691758817817,
       y: 0.030507756399612555,

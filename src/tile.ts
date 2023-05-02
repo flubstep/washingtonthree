@@ -2,61 +2,11 @@ import _ from "lodash";
 import * as THREE from "three";
 import { BASE_URL, XMIN, YMIN } from "./constants";
 
-const VERTEX_SHADER = `
-uniform float size;
-uniform sampler2D ground;
-uniform sampler2D ceiling;
-varying vec3 v_heightColor;
+import VERTEX_SHADER from "./shaders/vertex.glsl";
+import FRAGMENT_SHADER from "./shaders/fragment.glsl";
 
-void main() {
-  float xMin = 389400.0;
-  float xMax = 408600.0;
-  float yMin = 124200.0;
-  float yMax = 148200.0;
-
-  int aa = int(1000.0 * (position.x + position.y));
-  int bb = 200;
-  float xp = (position.x - xMin) / (xMax - xMin);
-  float yp = 1.0 - (position.y - yMin) / (yMax - yMin);
-
-  float zMin = texture2D(ground, vec2(xp, yp)).r * 65536.0 / 100.0;
-  float zMax = texture2D(ceiling, vec2(xp, yp)).r * 65536.0 / 100.0;
-
-  if (zMin > 327.68) {
-    zMin -= 655.36;
-  }
-  if (zMax > 327.68) {
-    zMax -= 655.36;
-  }
-  zMax = max(zMax, zMin + 20.0);
-
-  float fuzz = float(aa - (bb * int(aa / bb)));
-	gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  gl_PointSize = max(size, size * (100.0 - float(bb / 2) + fuzz) / gl_Position.w);
-
-  highp float height = (position.z - zMin) / (zMax - zMin) * 16581375.0;
-  int h = int(height);
-  if (h < 0) {
-    h = 0;
-  }
-  int bi = (h / 65536);
-  int gi = (h - bi * 65536) / 256;
-  int ri = (h - bi * 65536 - gi * 256);
-  float r = float(ri) / 256.0;
-  float g = float(gi) / 256.0;
-  float b = float(bi) / 256.0;
-  v_heightColor = vec3(b, b, b);
-}
-`;
-
-const FRAGMENT_SHADER = `
-varying vec3 v_heightColor;
-void main() {
-	gl_FragColor = vec4(v_heightColor, 1.0);
-}
-`;
-
-function tileSquareKeys(x, y, tile, length = 1) {
+// Computes which tile keys to load around a given position and a radius
+function tileSquareKeys(x: number, y: number, tile: number, length = 1) {
   const cx = Math.floor((x - XMIN) / tile);
   const cy = Math.floor((y - YMIN) / tile);
   const dists = _.range(-length + 1, length).flatMap((dx) =>
@@ -71,17 +21,30 @@ function tileSquareKeys(x, y, tile, length = 1) {
 }
 
 export class TileManager {
-  constructor(scene, heightMapTexture, ceilingMapTexture) {
-    this.scene = scene;
-    this.visibleTiles = {};
-    this.loadedKeys = [];
-    this.loadingTiles = {};
-    this.brokenTiles = {};
-    this.heightMapTexture = heightMapTexture;
-    this.ceilingMapTexture = ceilingMapTexture;
-  }
+  // For each tile length, the radius of tiles to load around the camera
+  // and the max height at which the tiles are displayable
+  public tileConfigurations: { [key: string]: { radius: number; maxHeight: number } } = {
+    8100: { radius: 5, maxHeight: 100000000 },
+    2700: { radius: 5, maxHeight: 20000 },
+    900: { radius: 5, maxHeight: 5000 },
+    300: { radius: 5, maxHeight: 2000 },
+    100: { radius: 5, maxHeight: 700 },
+  };
+  // Tiles that are loaded and added to the scene
+  private visibleTiles: { [key: string]: THREE.Points } = {};
+  // Cache of tile keys that have been loaded
+  private loadedKeys: string[] = [];
+  // Tiles that are currently being downloaded
+  private loadingTiles: { [key: string]: number } = {};
+  // Keep track of which tiles 404'ed so we don't request them again
+  private brokenTiles: { [key: string]: boolean } = {};
+  constructor(
+    public scene: THREE.Scene,
+    public heightMapTexture: THREE.Texture,
+    public ceilingMapTexture: THREE.Texture
+  ) {}
 
-  async loadTile(tileKey, size = 2.0) {
+  async loadTile(tileKey: string, size = 2.0) {
     if (this.loadingTiles[tileKey] || this.brokenTiles[tileKey]) {
       return;
     }
@@ -106,8 +69,6 @@ export class TileManager {
         return;
       }
       const vertices = new Float32Array(buffer);
-      const zMin = vertices[2];
-      const zMax = vertices[vertices.length - 1];
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
 
@@ -115,17 +76,9 @@ export class TileManager {
         vertexShader: VERTEX_SHADER,
         fragmentShader: FRAGMENT_SHADER,
         uniforms: {
-          zMin: { type: "f", value: zMin },
-          zMax: { type: "f", value: zMax },
           size: { type: "f", value: size },
-          ground: {
-            type: "t",
-            value: this.heightMapTexture,
-          },
-          ceiling: {
-            type: "t",
-            value: this.ceilingMapTexture,
-          },
+          ground: { type: "t", value: this.heightMapTexture },
+          ceiling: { type: "t", value: this.ceilingMapTexture },
         },
       });
       const mesh = new THREE.Points(geometry, material);
@@ -143,24 +96,22 @@ export class TileManager {
       const mesh = this.visibleTiles[evictKey];
       this.scene.remove(mesh);
       mesh.geometry.dispose();
-      mesh.material.dispose();
+      if (mesh.material instanceof THREE.Material) {
+        mesh.material.dispose();
+      } else {
+        mesh.material.forEach((m) => m.dispose());
+      }
       delete this.visibleTiles[evictKey];
       delete this.loadingTiles[evictKey];
     }
   }
 
-  async updatePosition(position) {
-    // TODO: Get 1, 4, 9 closest tiles of various densities
-    const tileKeyParams = [
-      [tileSquareKeys(position.x, position.y, 8100, 5), 100000000],
-      [tileSquareKeys(position.x, position.y, 2700, 5), 20000],
-      [tileSquareKeys(position.x, position.y, 900, 5), 5000],
-      [tileSquareKeys(position.x, position.y, 300, 5), 2000],
-      [tileSquareKeys(position.x, position.y, 100, 5), 700],
-    ];
+  async updatePosition(position: THREE.Vector3) {
     const tilePromises = [];
     const loadedKeys = [];
-    for (const [tileKeys, maxHeight] of tileKeyParams) {
+    for (const tileLength in this.tileConfigurations) {
+      const { radius, maxHeight } = this.tileConfigurations[tileLength];
+      const tileKeys = tileSquareKeys(position.x, position.y, parseInt(tileLength), radius);
       if (position.z > maxHeight) {
         continue;
       }
