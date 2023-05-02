@@ -156,6 +156,7 @@ class DragControls {
 
   onTouchMove(e) {
     if (this._dragStart && e.touches.length === 1) {
+      this.hideInstructions();
       e.stopPropagation();
       e.preventDefault();
       const [touch] = e.touches;
@@ -168,6 +169,7 @@ class DragControls {
       this.camera.position.sub(point);
       return false;
     } else if (this._pinchStart && e.touches.length === 2) {
+      this.hideInstructions();
       e.stopPropagation();
       e.preventDefault();
       const [touch1, touch2] = e.touches;

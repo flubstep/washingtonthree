@@ -139,12 +139,6 @@ h1 {
   padding: 6px;
 }
 
-@media only screen and (max-width: 600px) {
-  #instructions {
-    display: none;
-  }
-}
-
 #instructions {
   position: fixed;
   top: 0px;
