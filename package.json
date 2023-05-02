@@ -1,17 +1,19 @@
 {
   "name": "washingtonthree",
-  "source": "src/index.html",
+  "version": "2.1.0",
   "scripts": {
-    "start": "parcel",
-    "build": "parcel build"
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@tweenjs/tween.js": "^20.0.3",
     "dat.gui": "^0.7.9",
     "lil-gui": "^0.16.1",
     "lodash": "^4.17.21",
-    "parcel": "^2.8.3",
-    "three": "^0.141.0"
+    "three": "^0.141.0",
+    "typescript": "^5.0.4",
+    "vite": "^4.3.4"
   },
   "devDependencies": {
     "constants-browserify": "^1.0.0"
