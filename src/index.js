@@ -13,6 +13,7 @@ import {
   CY,
 } from "./constants";
 import { TileManager } from "./tile";
+import { GUI } from "dat.gui";
 
 import "./index.css";
 import { Bookmarks } from "./bookmarks";
@@ -88,6 +89,7 @@ class DragControls {
 
   onMouseMove(e) {
     if (this._modifier && this._rotateStart) {
+      this.hideInstructions();
       const dx = e.clientX - this._rotateStart.x;
       const dy = e.clientY - this._rotateStart.y;
       this.camera.rotation.x = Math.min(
@@ -104,9 +106,14 @@ class DragControls {
     if (!point) {
       return;
     }
+    this.hideInstructions();
     this.camera.position.copy(this._cameraStart.position);
     this.camera.position.add(this._dragStart);
     this.camera.position.sub(point);
+  }
+
+  hideInstructions() {
+    document.getElementById("instructions").classList.add("hidden");
   }
 
   reset(e) {
@@ -124,6 +131,7 @@ class DragControls {
     e.preventDefault();
     const z = camera.position.z;
     camera.position.z = Math.min(this.maxCameraY, Math.max(this.minCameraY, z + e.deltaY));
+    this.hideInstructions();
     return false;
   }
 
@@ -244,6 +252,7 @@ class DragControls {
   }
 
   moveTo(position, rotation, durationMs = 1000) {
+    this.hideInstructions();
     new TWEEN.Tween(this.camera.position)
       // Set the target position
       .to(position, durationMs)
@@ -354,6 +363,21 @@ async function main() {
       bookmarkIndex %= bookmarks.length;
     }
   });
+
+  const gui = new GUI({ autoPlace: false });
+  const navigationFolder = gui.addFolder("Navigate to Landmark");
+  const navigationActions = {};
+  for (const bookmark of Bookmarks) {
+    navigationActions[bookmark.name] = () => {
+      controls.moveTo(bookmark.position, bookmark.rotation, 1000);
+    };
+  }
+  for (const bookmark of Bookmarks) {
+    navigationFolder.add(navigationActions, bookmark.name);
+  }
+  navigationFolder.open();
+  gui.domElement.id = "gui";
+  document.body.appendChild(gui.domElement);
 
   window.camera = camera;
   window.tiles = tiles;

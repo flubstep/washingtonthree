@@ -130,25 +130,53 @@ table {
 }
 
 body {
-  font-family: "Avenir", Arial, Helvetica, sans-serif;
+  font-family: system-ui, sans-serif;
+}
+
+h1 {
+  font-size: 18px;
+  font-weight: 500;
+  padding: 6px;
 }
 
 @media only screen and (max-width: 600px) {
-  .instructions.desktop {
+  #instructions {
     display: none;
   }
 }
 
-.instructions.desktop {
+#instructions {
   position: fixed;
-  top: 10px;
-  right: 10px;
+  top: 0px;
+  left: 0px;
+  width: 100vw;
+  height: 100vh;
   color: #cccccc;
-  font-size: 14px;
-  background-color: rgba(0, 0, 0, 0.5);
-  padding: 10px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  transition: opacity 0.5s ease-in-out;
+}
+
+#instructions.hidden {
+  opacity: 0;
+}
+
+.list {
+  padding: 8px 16px;
+  background-color: rgba(25, 118, 210, 0.9);
+  border-radius: 8px;
 }
 
 .dragging {
   cursor: move;
+}
+
+#gui {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  pointer-events: all;
 }
