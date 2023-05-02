@@ -1,9 +1,9 @@
-import _ from "lodash";
-import * as THREE from "three";
-import { BASE_URL, XMIN, YMIN } from "./constants";
+import _ from 'lodash';
+import * as THREE from 'three';
 
-import VERTEX_SHADER from "./shaders/vertex.glsl";
-import FRAGMENT_SHADER from "./shaders/fragment.glsl";
+import { BASE_URL, XMIN, YMIN } from './constants';
+import FRAGMENT_SHADER from './shaders/fragment.glsl';
+import VERTEX_SHADER from './shaders/vertex.glsl';
 
 // Computes which tile keys to load around a given position and a radius
 function tileSquareKeys(x: number, y: number, tile: number, length = 1) {
@@ -76,9 +76,9 @@ export class TileManager {
         vertexShader: VERTEX_SHADER,
         fragmentShader: FRAGMENT_SHADER,
         uniforms: {
-          size: { type: "f", value: size },
-          ground: { type: "t", value: this.heightMapTexture },
-          ceiling: { type: "t", value: this.ceilingMapTexture },
+          size: { value: size },
+          ground: { value: this.heightMapTexture },
+          ceiling: { value: this.ceilingMapTexture },
         },
       });
       const mesh = new THREE.Points(geometry, material);

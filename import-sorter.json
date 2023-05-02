@@ -1,0 +1,37 @@
+{
+  "importSorter.generalConfiguration.sortOnBeforeSave": true,
+  "importSorter.importStringConfiguration.maximumNumberOfImportExpressionsPerLine.type": "newLineEachExpressionAfterCountLimit",
+  "importSorter.importStringConfiguration.maximumNumberOfImportExpressionsPerLine.count": 100,
+  "importSorter.importStringConfiguration.tabSize": 2,
+  "importSorter.importStringConfiguration.quoteMark": "single",
+  "importSorter.importStringConfiguration.trailingComma": "multiLine",
+  "importSorter.sortConfiguration.customOrderingRules.rules": [
+    {
+      "regex": "tracer",
+      "orderLevel": 1
+    },
+    {
+      "regex": "^react$",
+      "orderLevel": 5,
+      "disableSort": true
+    },
+    {
+      "type": "importMember",
+      "regex": "^$",
+      "orderLevel": 10,
+      "disableSort": true
+    },
+    {
+      "regex": "^[@]",
+      "orderLevel": 30
+    },
+    {
+      "regex": "^frontend",
+      "orderLevel": 35
+    },
+    {
+      "regex": "^[.]",
+      "orderLevel": 40
+    }
+  ]
+}
