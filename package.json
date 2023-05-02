@@ -6,6 +6,7 @@
     "build": "parcel build"
   },
   "dependencies": {
+    "@tweenjs/tween.js": "^20.0.3",
     "lil-gui": "^0.16.1",
     "lodash": "^4.17.21",
     "parcel": "^2.8.3",

@@ -1,5 +1,6 @@
 import _ from "lodash";
 import * as THREE from "three";
+import * as TWEEN from "@tweenjs/tween.js";
 import Stats from "three/examples/jsm/libs/stats.module";
 import {
   HEIGHT_MAP_TEXTURE_URL,
@@ -14,6 +15,7 @@ import {
 import { TileManager } from "./tile";
 
 import "./index.css";
+import { Bookmarks } from "./bookmarks";
 
 const PinchState = {
   None: 1,
@@ -241,6 +243,24 @@ class DragControls {
     }
   }
 
+  moveTo(position, rotation, durationMs = 1000) {
+    new TWEEN.Tween(this.camera.position)
+      // Set the target position
+      .to(position, durationMs)
+      .easing(TWEEN.Easing.Quadratic.InOut)
+      .start();
+
+    const currentRotation = new THREE.Quaternion();
+    currentRotation.setFromEuler(this.camera.rotation);
+    new TWEEN.Tween(currentRotation)
+      .to({ x: rotation.x, y: rotation.y, z: rotation.z, w: rotation.w }, durationMs)
+      .easing(TWEEN.Easing.Quadratic.InOut)
+      .onUpdate((q) => {
+        this.camera.rotation.setFromQuaternion(q);
+      })
+      .start();
+  }
+
   update() {}
 }
 
@@ -279,16 +299,18 @@ async function main() {
   tiles.updatePosition(camera.position);
   let nextCameraUpdate = Date.now() + delay;
 
-  function animate() {
+  function animate(time) {
     if (Date.now() > nextCameraUpdate) {
       tiles.updatePosition(camera.position);
       nextCameraUpdate = Date.now() + delay;
     }
     requestAnimationFrame(animate);
     renderer.render(scene, camera);
+    TWEEN.update(time);
+    controls.update();
     stats.update();
   }
-  animate();
+  animate(0);
 
   window.addEventListener(
     "resize",
@@ -296,12 +318,12 @@ async function main() {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
-      controls.update();
     },
     false
   );
 
-  const bookmarks = [];
+  const bookmarks = Bookmarks;
+  let bookmarkIndex = 0;
   window.addEventListener("keydown", (e) => {
     if (e.key === "c") {
       const name = prompt("Give a name for this shortcut location.");
@@ -324,6 +346,12 @@ async function main() {
       setTimeout(() => {
         anchor.remove();
       });
+    }
+    if (e.key === "m") {
+      const bookmark = bookmarks[bookmarkIndex];
+      controls.moveTo(bookmark.position, bookmark.rotation, 1000);
+      bookmarkIndex++;
+      bookmarkIndex %= bookmarks.length;
     }
   });
 
