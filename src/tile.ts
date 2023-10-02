@@ -24,8 +24,6 @@ function tileSquareKeys(x: number, y: number, tile: number, length = 1) {
   return _.compact(keys);
 }
 
-let pointsLoaded = 0;
-
 export class TileManager {
   // For each tile length, the radius of tiles to load around the camera
   // and the max height at which the tiles are displayable
@@ -73,8 +71,6 @@ export class TileManager {
       const vertices = new Float32Array(buffer);
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
-
-      pointsLoaded += vertices.length / 3;
 
       const material = new THREE.ShaderMaterial({
         vertexShader: VERTEX_SHADER,
