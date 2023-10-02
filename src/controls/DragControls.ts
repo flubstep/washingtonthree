@@ -1,7 +1,7 @@
-import _ from 'lodash';
-import * as THREE from 'three';
+import _ from "lodash";
+import * as THREE from "three";
 
-import * as TWEEN from '@tweenjs/tween.js';
+import * as TWEEN from "@tweenjs/tween.js";
 
 enum PinchState {
   None = 1,
@@ -117,8 +117,14 @@ export class DragControls {
   onWheel(e: WheelEvent) {
     e.stopPropagation();
     e.preventDefault();
-    const z = this.camera.position.z;
-    this.camera.position.z = Math.min(this.maxCameraY, Math.max(this.minCameraY, z + e.deltaY));
+    const vCamera = new THREE.Vector3(0, 0, 1);
+    vCamera.applyQuaternion(this.camera.quaternion);
+    vCamera.multiplyScalar(e.deltaY * 0.08);
+    const posCam = this.camera.position.clone();
+    posCam.add(vCamera);
+    if (posCam.z <= this.maxCameraY && posCam.z >= this.minCameraY) {
+      this.camera.position.set(posCam.x, posCam.y, posCam.z);
+    }
     this.hideInstructions();
     return false;
   }
