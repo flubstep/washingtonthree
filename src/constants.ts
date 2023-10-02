@@ -1,5 +1,5 @@
-export const [XMIN, XMAX] = [389400, 408600];
-export const [YMIN, YMAX] = [124200, 148200];
+export const [XMIN, XMAX] = [397100, 397700];
+export const [YMIN, YMAX] = [136700, 137300];
 export const CX = (XMIN + XMAX) / 2;
 export const CY = (YMIN + YMAX) / 2;
 

@@ -1,9 +1,9 @@
-import _ from 'lodash';
-import * as THREE from 'three';
+import _ from "lodash";
+import * as THREE from "three";
 
-import { BASE_URL, XMIN, YMIN } from './constants';
-import FRAGMENT_SHADER from './shaders/fragment.glsl';
-import VERTEX_SHADER from './shaders/vertex.glsl';
+import { BASE_URL, XMAX, XMIN, YMAX, YMIN } from "./constants";
+import FRAGMENT_SHADER from "./shaders/fragment.glsl";
+import VERTEX_SHADER from "./shaders/vertex.glsl";
 
 // Computes which tile keys to load around a given position and a radius
 function tileSquareKeys(x: number, y: number, tile: number, length = 1) {
@@ -13,22 +13,24 @@ function tileSquareKeys(x: number, y: number, tile: number, length = 1) {
     _.range(-length + 1, length).map((dy) => [dx, dy])
   );
   const sortedDists = _.sortBy(dists, ([x, y]) => Math.abs(x) + Math.abs(y));
-  return sortedDists.map(([dx, dy]) => {
+  const keys = sortedDists.map(([dx, dy]) => {
     const tx = (cx + dx) * tile + XMIN;
     const ty = (cy + dy) * tile + YMIN;
+    if (tx < XMIN || tx >= XMAX || ty < YMIN || ty >= YMAX) {
+      return null;
+    }
     return `${tx}_${ty}_${tile}`;
   });
+  return _.compact(keys);
 }
+
+let pointsLoaded = 0;
 
 export class TileManager {
   // For each tile length, the radius of tiles to load around the camera
   // and the max height at which the tiles are displayable
   public tileConfigurations: { [key: string]: { radius: number; maxHeight: number } } = {
-    8100: { radius: 5, maxHeight: 100000000 },
-    2700: { radius: 5, maxHeight: 20000 },
-    900: { radius: 5, maxHeight: 5000 },
-    300: { radius: 5, maxHeight: 2000 },
-    100: { radius: 5, maxHeight: 700 },
+    100: { radius: 8, maxHeight: 100000000 },
   };
   // Tiles that are loaded and added to the scene
   private visibleTiles: { [key: string]: THREE.Points } = {};
@@ -44,7 +46,7 @@ export class TileManager {
     public ceilingMapTexture: THREE.Texture
   ) {}
 
-  async loadTile(tileKey: string, size = 2.0) {
+  async loadTile(tileKey: string, size = 1.5) {
     if (this.loadingTiles[tileKey] || this.brokenTiles[tileKey]) {
       return;
     }
@@ -72,6 +74,8 @@ export class TileManager {
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
 
+      pointsLoaded += vertices.length / 3;
+
       const material = new THREE.ShaderMaterial({
         vertexShader: VERTEX_SHADER,
         fragmentShader: FRAGMENT_SHADER,
@@ -90,20 +94,7 @@ export class TileManager {
   }
 
   discardUnloadedKeys() {
-    const visibleKeys = _.keys(this.visibleTiles);
-    const evictKeys = _.difference(visibleKeys, this.loadedKeys);
-    for (const evictKey of evictKeys) {
-      const mesh = this.visibleTiles[evictKey];
-      this.scene.remove(mesh);
-      mesh.geometry.dispose();
-      if (mesh.material instanceof THREE.Material) {
-        mesh.material.dispose();
-      } else {
-        mesh.material.forEach((m) => m.dispose());
-      }
-      delete this.visibleTiles[evictKey];
-      delete this.loadingTiles[evictKey];
-    }
+    return;
   }
 
   async updatePosition(position: THREE.Vector3) {

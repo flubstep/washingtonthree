@@ -1,14 +1,14 @@
-import './index.css';
+import "./index.css";
 
-import { GUI } from 'dat.gui';
-import _ from 'lodash';
-import * as THREE from 'three';
+import { GUI } from "dat.gui";
+import _ from "lodash";
+import * as THREE from "three";
 // @ts-ignore
-import Stats from 'three/examples/jsm/libs/stats.module';
+import Stats from "three/examples/jsm/libs/stats.module";
 
-import * as TWEEN from '@tweenjs/tween.js';
+import * as TWEEN from "@tweenjs/tween.js";
 
-import { Bookmarks } from './bookmarks';
+import { Bookmarks } from "./bookmarks";
 import {
   CEILING_HEIGHT_TEXTURE_URL,
   CX,
@@ -18,9 +18,9 @@ import {
   XMIN,
   YMAX,
   YMIN,
-} from './constants';
-import { DragControls } from './controls/DragControls';
-import { TileManager } from './tile';
+} from "./constants";
+import { DragControls } from "./controls/DragControls";
+import { TileManager } from "./tile";
 
 async function main() {
   const scene = new THREE.Scene();
@@ -42,7 +42,8 @@ async function main() {
     50000
   );
   camera.up.set(0, 0, 1);
-  camera.position.set(CX, CY, 3000);
+  camera.position.set(CX + 400, CY - 300, 300);
+  camera.rotation.set(1.0333, 0, 0.8416);
 
   // Displays frames per second
   const stats = Stats();
@@ -50,7 +51,7 @@ async function main() {
 
   // Needed for the drag controls
   // TODO: Use a ground mesh instead of a plane
-  const planeGeometry = new THREE.PlaneGeometry(XMAX - XMIN, YMAX - YMIN);
+  const planeGeometry = new THREE.PlaneGeometry(XMAX - XMIN * 3, YMAX - YMIN * 3);
   const planeMaterial = new THREE.MeshBasicMaterial({ opacity: 0.0, transparent: true });
   const plane = new THREE.Mesh(planeGeometry, planeMaterial);
   plane.position.set(CX, CY, 0);
@@ -136,7 +137,7 @@ async function main() {
   }
   navigationFolder.open();
   gui.domElement.id = "gui";
-  document.body.appendChild(gui.domElement);
+  //document.body.appendChild(gui.domElement);
 
   // Helpful for debugging in the browser console
   // @ts-ignore
